@@ -136,22 +136,29 @@ if(!setequal(colnames(df_fahrzeugteile_oem_1_type_11), colnames(df_fahrzeugteile
 # data <- read.table("data/Einzelteil/Einzelteil_T02.txt", header=FALSE, sep="  ", quote="", comment.char="", stringsAsFactors=FALSE, fill=TRUE)
 
 
-#library(readr)
-#file_str <- read_file("data/Einzelteil/Einzelteil_T02.txt")
+library(readr)
+file_str <- read_file("data/Einzelteil/Einzelteil_T02.txt")
 # remove " from string
-#cleaned_string <- gsub('"', '', file_str)
+cleaned_string <- gsub('"', '', file_str)
 # split on tabs and on spaces
-#lines <- strsplit(cleaned_string, "\\s+|\t+")[[1]]
-# extract the colnames
-# col_names_t02 = lines[[1]][1:15]
-# body <- lines[[1]][16:length(lines[[1]])]
+lines <- strsplit(cleaned_string, "\\s+|\t+")[[1]]
 
-#n_col <- 15
+n_cols <- 15
 
 # Create an empty data frame with appropriate column names
-# df <- data.frame(matrix(lines[[1]][(elems_per_row + 1):length(lines[[1]])], ncol = elems_per_row))
-#data.frame(matrix(lines, ncol=15))
+data_matrix = matrix(
+  lines[n_cols+1:length(lines)],
+  ncol=n_cols+1,
+  byrow = TRUE,
+)
 
+# Drop the index row - it will be recreated anyways
+data_matrix <- data_matrix[, -1]
+# Give the data matrix the correct column names
+colnames(data_matrix) = lines[1:n_cols]
+# Generate the dataframe
+df_controll_unit_t02 <- data.frame(data_matrix)
+ 
 #t02_df <- data.frame(matrix(NA, ncol = elements_per_row, nrow = num_rows))
 #colnames(t02_df) <- paste0("Col", 1:elements_per_row)
 
