@@ -3,6 +3,7 @@ install.packages("tidyverse")
 install.packages("data.table")
 library(data.table)
 library(tidyverse)
+library(dplyr)
 
 ###########################
 # 
@@ -27,10 +28,10 @@ df_fahrzeug_oem_2_type_21 <- read.csv("data/Fahrzeug/Fahrzeuge_OEM2_Typ21.csv", 
 df_fahrzeug_oem_2_type_22 <- read.csv("data/Fahrzeug/Fahrzeuge_OEM2_Typ22.csv", sep=";", header = T, stringsAsFactors = F, row.names = "X")
 
 # Parse dates
-df_fahrzeug_oem_2_type_21 <- df_fahrzeug_oem_2_type_21 %>% mutate(Produktionsdatum = as.Date(Produktionsdatum_Origin_01011970))
-df_fahrzeug_oem_2_type_22 <- df_fahrzeug_oem_2_type_22 %>% mutate(Produktionsdatum = as.Date(Produktionsdatum_Origin_01011970))
+df_fahrzeug_oem_2_type_21 <- df_fahrzeug_oem_2_type_21 %>% mutate(Produktionsdatum = as.Date(Produktionsdatum_Origin_01011970, origin = "1970-01-01"))
+df_fahrzeug_oem_2_type_22 <- df_fahrzeug_oem_2_type_22 %>% mutate(Produktionsdatum = as.Date(Produktionsdatum_Origin_01011970, origin = "1970-01-01"))
 
-# Drop unnessescary columns
+# Drop unneccessary columns
 columns_to_drop = c("Produktionsdatum_Origin_01011970", "origin")
 df_fahrzeug_oem_2_type_21 <- df_fahrzeug_oem_2_type_21 %>% select(-columns_to_drop)
 df_fahrzeug_oem_2_type_22 <- df_fahrzeug_oem_2_type_22 %>% select(-columns_to_drop)
@@ -66,6 +67,14 @@ if(!setequal(colnames(df_fahrzeug_oem_1_type_11), colnames(df_fahrzeug_oem_1_typ
 
 # Concatenate the dataframes
 df_fahrzeug <- rbind(df_fahrzeug_oem_1_type_11, df_fahrzeug_oem_1_type_12,df_fahrzeug_oem_2_type_21, df_fahrzeug_oem_2_type_22)
+
+# Remove dataframes no longer needed, then garbage collect
+rm(df_fahrzeug_oem_1_type_11)
+rm(df_fahrzeug_oem_1_type_12)
+rm(df_fahrzeug_oem_2_type_21)
+rm(df_fahrzeug_oem_2_type_22)
+rm(columns_to_drop)
+
 
 # Drop redundant X1 column
 df_fahrzeug <- df_fahrzeug %>% select(-c("X1"))
