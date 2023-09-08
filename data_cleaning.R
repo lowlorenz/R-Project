@@ -1,9 +1,15 @@
 #setwd("C:/Users/Lorenz/Documents/R-Project")
-install.packages("tidyverse")
-install.packages("data.table")
+#install.packages("tidyverse")
+#install.packages("data.table")
 library(data.table)
 library(tidyverse)
 library(dplyr)
+library(readr)
+
+
+################################################################################
+#### LOAD VEHICLE DATAFRAMES
+################################################################################
 
 ###########################
 # 
@@ -31,29 +37,6 @@ df_fahrzeug_oem_2_type_22 <- read.csv("data/Fahrzeug/Fahrzeuge_OEM2_Typ22.csv", 
 df_fahrzeug_oem_2_type_21 <- df_fahrzeug_oem_2_type_21 %>% mutate(Produktionsdatum = as.Date(Produktionsdatum_Origin_01011970, origin = "1970-01-01"))
 df_fahrzeug_oem_2_type_22 <- df_fahrzeug_oem_2_type_22 %>% mutate(Produktionsdatum = as.Date(Produktionsdatum_Origin_01011970, origin = "1970-01-01"))
 
-# Drop unneccessary columns
-columns_to_drop = c("Produktionsdatum_Origin_01011970", "origin")
-df_fahrzeug_oem_2_type_21 <- df_fahrzeug_oem_2_type_21 %>% select(-columns_to_drop)
-df_fahrzeug_oem_2_type_22 <- df_fahrzeug_oem_2_type_22 %>% select(-columns_to_drop)
-
-# Add and type
-df_fahrzeug_oem_1_type_11 <- df_fahrzeug_oem_1_type_11 %>% mutate(Typ = "11")
-df_fahrzeug_oem_1_type_12 <- df_fahrzeug_oem_1_type_12 %>% mutate(Typ = "12")
-df_fahrzeug_oem_2_type_21 <- df_fahrzeug_oem_2_type_21 %>% mutate(Typ = "21")
-df_fahrzeug_oem_2_type_22 <- df_fahrzeug_oem_2_type_22 %>% mutate(Typ = "22")
-
-# Cast Produktionsdatum to date
-df_fahrzeug_oem_1_type_11$Produktionsdatum <- as.Date(df_fahrzeug_oem_1_type_11$Produktionsdatum)
-df_fahrzeug_oem_1_type_12$Produktionsdatum <- as.Date(df_fahrzeug_oem_1_type_12$Produktionsdatum)
-df_fahrzeug_oem_2_type_21$Produktionsdatum <- as.Date(df_fahrzeug_oem_2_type_21$Produktionsdatum)
-df_fahrzeug_oem_2_type_22$Produktionsdatum <- as.Date(df_fahrzeug_oem_2_type_22$Produktionsdatum)
-
-# Print the col names
-colnames(df_fahrzeug_oem_1_type_11)
-colnames(df_fahrzeug_oem_1_type_12)
-colnames(df_fahrzeug_oem_2_type_21)
-colnames(df_fahrzeug_oem_2_type_22)
-
 # Check if all dataframes have the same col names
 if(!setequal(colnames(df_fahrzeug_oem_1_type_11), colnames(df_fahrzeug_oem_1_type_12)) ||
    !setequal(colnames(df_fahrzeug_oem_1_type_11), colnames(df_fahrzeug_oem_2_type_21)) ||
@@ -67,18 +50,10 @@ if(!setequal(colnames(df_fahrzeug_oem_1_type_11), colnames(df_fahrzeug_oem_1_typ
 
 # Concatenate the dataframes
 df_fahrzeug <- rbind(df_fahrzeug_oem_1_type_11, df_fahrzeug_oem_1_type_12,df_fahrzeug_oem_2_type_21, df_fahrzeug_oem_2_type_22)
+df_fahrzeug <- df_fahrzeug %>% select(ID_Fahrzeug, Produktionsdatum) %>% mutate(Produktionsdatum = as.Date(Produktionsdatum))
 
 # Remove dataframes no longer needed, then garbage collect
-rm(df_fahrzeug_oem_1_type_11)
-rm(df_fahrzeug_oem_1_type_12)
-rm(df_fahrzeug_oem_2_type_21)
-rm(df_fahrzeug_oem_2_type_22)
-rm(columns_to_drop)
-
-
-# Drop redundant X1 column
-df_fahrzeug <- df_fahrzeug %>% select(-c("X1"))
-colnames(df_fahrzeug)
+rm(df_fahrzeug_oem_1_type_11, df_fahrzeug_oem_1_type_12, df_fahrzeug_oem_2_type_21, df_fahrzeug_oem_2_type_22)
 
 
 # Check if all ID's are unique
@@ -102,15 +77,9 @@ if(
   cat("[Check passed]: all vehicles are produced in the requested timeframe.")
 }
 
-###########################
-#
-# Seperated by ';':
-# Bestandteile_Fahrzeuge_OEM1_Typ11.csv
-# Bestandteile_Fahrzeuge_OEM1_Typ12.csv
-# Bestandteile_Fahrzeuge_OEM2_Typ21.csv
-# Bestandteile_Fahrzeuge_OEM2_Typ22.csv
-#
-
+################################################################################
+#### LOAD VEHICLEPART DATAFRAMES
+################################################################################
 
 # Load the vehicleparts from OEM 1
 df_fahrzeugteile_oem_1_type_11 <- read.csv("data/Fahrzeug/Bestandteile_Fahrzeuge_OEM1_Typ11.csv", sep=";", header = T, stringsAsFactors = F, row.names = "X")
@@ -119,12 +88,6 @@ df_fahrzeugteile_oem_1_type_12 <- read.csv("data/Fahrzeug/Bestandteile_Fahrzeuge
 # Load the vehicleparts from OEM 2
 df_fahrzeugteile_oem_2_type_21 <- read.csv("data/Fahrzeug/Bestandteile_Fahrzeuge_OEM2_Typ21.csv", sep=";", header = T, stringsAsFactors = F, row.names = "X")
 df_fahrzeugteile_oem_2_type_22 <- read.csv("data/Fahrzeug/Bestandteile_Fahrzeuge_OEM2_Typ22.csv", sep=";", header = T, stringsAsFactors = F, row.names = "X1")
-
-# Print the col names
-colnames(df_fahrzeugteile_oem_1_type_11)
-colnames(df_fahrzeugteile_oem_1_type_12)
-colnames(df_fahrzeugteile_oem_2_type_21)
-colnames(df_fahrzeugteile_oem_2_type_22)
 
 
 # Check if all dataframes have the same col names
@@ -138,27 +101,34 @@ if(!setequal(colnames(df_fahrzeugteile_oem_1_type_11), colnames(df_fahrzeugteile
   cat("[Check passed]: All dataframes have the same column names.")
 }
 
-
-
-# Read the data with whitespace as the separator
-# data <- fread("data/Einzelteil/Einzelteil_T02.txt", sep = " ")
-# data <- read.table("data/Einzelteil/Einzelteil_T02.txt", header=FALSE, sep="  ", quote="", comment.char="", stringsAsFactors=FALSE, fill=TRUE)
-
-
+# Concatenate the parts dataframes
 df_fahrzeug_teile <- rbind(df_fahrzeugteile_oem_1_type_11, df_fahrzeugteile_oem_1_type_12,df_fahrzeugteile_oem_2_type_21, df_fahrzeugteile_oem_2_type_22)
-
-df_fahrzeug_joined <- inner_join(x = df_fahrzeug, y = df_fahrzeug_teile, by = "ID_Fahrzeug")
 
 # Mutate the row and keep only the substring until the first "-", to get the engine Type
 # Then filter for the gasoline engine “K1BE1” and “K1BE2”
-df_fahrzeug_joined <- df_fahrzeug_joined %>%
+df_fahrzeug_teile <- df_fahrzeug_teile %>%
   mutate(Motor = sapply(strsplit(as.character(ID_Motor), "-"), `[`, 1)) %>%
   filter(Motor %in% c("K1BE1", "K1BE2"))
 
-unique(df_fahrzeug_joined$Motor)
+################################################################################
+#### LOAD COMPONENT DATAFRAMES
+################################################################################
 
+# Load the component dataframes
+df_komponenten_K1BE1 <- read.csv("data/Komponente/Bestandteile_Komponente_K1BE1.csv", sep = ";", header = T, stringsAsFactors = F) 
+df_komponenten_K1BE2 <- read.csv("data/Komponente/Bestandteile_Komponente_K1BE2.csv", sep = ";", header = T, stringsAsFactors = F) 
 
-library(readr)
+# Select only the relevant columns
+df_komponenten_K1BE1 <- df_komponenten_K1BE1 %>% select(ID_Motor = ID_K1BE1, ID_T2 = ID_T2)
+df_komponenten_K1BE2 <- df_komponenten_K1BE2 %>% select(ID_Motor = ID_K1BE2, ID_T2 = ID_T2)
+
+# Concat the component dataframes
+df_komponenten <- rbind(df_komponenten_K1BE1, df_komponenten_K1BE2)
+
+################################################################################
+#### LOAD CONTROL UNIT T02 DATAFRAMES
+################################################################################
+
 file_str <- read_file("data/Einzelteil/Einzelteil_T02.txt")
 # remove " from string
 cleaned_string <- gsub('"', '', file_str)
@@ -208,5 +178,18 @@ df_controll_unit_t02 <- df_controll_unit_t02 %>%  #rename
   filter(Produktionsdatum <= as.Date("2010-12-31"),  
          Produktionsdatum >= as.Date("2008-04-01"))
   
-# df_controll_unit_t02 <- df_controll_unit_t02 %>% filter(Herstellernummer.x == )
+################################################################################
+#### COMBINE ALL THE DATAFRAMES 
+################################################################################
+
+# Join the vehicles and df_fahrzeug_teile via ID_Fahrzeug to get the MotorID
+# Join the result and df_komponenten via ID_Motor to get the T2 ID
+# Join the results and df_controll_unit_t02 to only keep vehicles with affected T2 units
+df_affected_vehilces <- df_fahrzeug %>% 
+  inner_join(df_fahrzeug_teile, by = "ID_Fahrzeug") %>%
+  select(ID_Fahrzeug, ID_Motor) %>%
+  inner_join(df_komponenten, by = "ID_Motor") %>%
+  select(ID_Fahrzeug, ID_T02 = ID_T2, ID_Motor) %>%
+  inner_join(df_controll_unit_t02, by = "ID_T02") %>%
+  select(ID_Fahrzeug, ID_T02, ID_Motor)
 
