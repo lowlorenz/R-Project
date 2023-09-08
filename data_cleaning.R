@@ -136,6 +136,19 @@ if(!setequal(colnames(df_fahrzeugteile_oem_1_type_11), colnames(df_fahrzeugteile
 # data <- read.table("data/Einzelteil/Einzelteil_T02.txt", header=FALSE, sep="  ", quote="", comment.char="", stringsAsFactors=FALSE, fill=TRUE)
 
 
+df_fahrzeug_teile <- rbind(df_fahrzeugteile_oem_1_type_11, df_fahrzeugteile_oem_1_type_12,df_fahrzeugteile_oem_2_type_21, df_fahrzeugteile_oem_2_type_22)
+
+df_fahrzeug_joined <- inner_join(x = df_fahrzeug, y = df_fahrzeug_teile, by = "ID_Fahrzeug")
+
+# Mutate the row and keep only the substring until the first "-", to get the engine Type
+# Then filter for the gasoline engine “K1BE1” and “K1BE2”
+df_fahrzeug_joined <- df_fahrzeug_joined %>%
+  mutate(Motor = sapply(strsplit(as.character(ID_Motor), "-"), `[`, 1)) %>%
+  filter(Motor %in% c("K1BE1", "K1BE2"))
+
+unique(df_fahrzeug_joined$Motor)
+
+
 library(readr)
 file_str <- read_file("data/Einzelteil/Einzelteil_T02.txt")
 # remove " from string
@@ -158,11 +171,33 @@ data_matrix <- data_matrix[, -1]
 colnames(data_matrix) = lines[1:n_cols]
 # Generate the dataframe
 df_controll_unit_t02 <- data.frame(data_matrix)
- 
-#t02_df <- data.frame(matrix(NA, ncol = elements_per_row, nrow = num_rows))
-#colnames(t02_df) <- paste0("Col", 1:elements_per_row)
 
+# The dataset is screwed it has this form
+# ... Herstellernummer.x | Herstellernummer.y ...
+#     201                | NA         
+#     201                | NA
+#     201                | NA
+#     NA                 | 202
+#     NA                 | 202
+#     NA                 | 202
+# So we need to keep only the .y part of the framework, since we are only interested
+# in the parts that originate from the plant 202 
+# Then we filter for the correct Plant Id and make sure that the dates align with our information
+df_controll_unit_t02 <- df_controll_unit_t02 %>%  #rename
+  select(X1=X1,
+         ID_T02=ID_T02.y,
+         Herstellernummer=Herstellernummer.y,
+         Produktionsdatum=Produktionsdatum.y,
+         Werksnummer=Werksnummer.y,
+         Fehlerhaft=Fehlerhaft.y,
+         Fehlerhaft_Datum=Fehlerhaft_Datum.y,
+         Fehlerhaft_Fahrleistung=Fehlerhaft_Fahrleistung.y) %>% #filter for plant and manufacturer
+  filter(Herstellernummer == "202",
+         Werksnummer == "2022") %>% # cast to date
+  mutate(Produktionsdatum = as.Date(Produktionsdatum),
+         Fehlerhaft_Datum = as.Date(Fehlerhaft_Datum)) %>% # filter for date 
+  filter(Produktionsdatum <= as.Date("2010-12-31"),  
+         Produktionsdatum >= as.Date("2008-04-01"))
+  
+# df_controll_unit_t02 <- df_controll_unit_t02 %>% filter(Herstellernummer.x == )
 
-
-# Print the data frame
-#summary(data)
