@@ -33,9 +33,15 @@ df_fahrzeug_oem_1_type_12 <- read.csv("data/Fahrzeug/Fahrzeuge_OEM1_Typ12.csv", 
 df_fahrzeug_oem_2_type_21 <- read.csv("data/Fahrzeug/Fahrzeuge_OEM2_Typ21.csv", header = T, stringsAsFactors = F, row.names = "X")
 df_fahrzeug_oem_2_type_22 <- read.csv("data/Fahrzeug/Fahrzeuge_OEM2_Typ22.csv", sep=";", header = T, stringsAsFactors = F, row.names = "X")
 
-# Parse dates
-df_fahrzeug_oem_2_type_21 <- df_fahrzeug_oem_2_type_21 %>% mutate(Produktionsdatum = as.Date(Produktionsdatum_Origin_01011970, origin = "1970-01-01"))
-df_fahrzeug_oem_2_type_22 <- df_fahrzeug_oem_2_type_22 %>% mutate(Produktionsdatum = as.Date(Produktionsdatum_Origin_01011970, origin = "1970-01-01"))
+# Parse dates with Produktionsdatum_Origin_01011970 as number of days since timestamp supplied in column origin
+df_fahrzeug_oem_2_type_21 <- df_fahrzeug_oem_2_type_21 %>% mutate(Produktionsdatum = as.Date(Produktionsdatum_Origin_01011970, origin = as.Date(origin, "%d-%m-%Y")))
+df_fahrzeug_oem_2_type_22 <- df_fahrzeug_oem_2_type_22 %>% mutate(Produktionsdatum = as.Date(Produktionsdatum_Origin_01011970, origin = as.Date(origin, "%d-%m-%Y")))
+
+
+# Drop old Produktionsdatum_Origin_01011970 and origin columns since they are no longer required
+df_fahrzeug_oem_2_type_21 <- df_fahrzeug_oem_2_type_21 %>% select(-Produktionsdatum_Origin_01011970, -origin)
+df_fahrzeug_oem_2_type_22 <- df_fahrzeug_oem_2_type_22 %>% select(-Produktionsdatum_Origin_01011970, -origin)
+
 
 # Check if all dataframes have the same col names
 if(!setequal(colnames(df_fahrzeug_oem_1_type_11), colnames(df_fahrzeug_oem_1_type_12)) ||
@@ -52,9 +58,8 @@ if(!setequal(colnames(df_fahrzeug_oem_1_type_11), colnames(df_fahrzeug_oem_1_typ
 df_fahrzeug <- rbind(df_fahrzeug_oem_1_type_11, df_fahrzeug_oem_1_type_12,df_fahrzeug_oem_2_type_21, df_fahrzeug_oem_2_type_22)
 df_fahrzeug <- df_fahrzeug %>% select(ID_Fahrzeug, Produktionsdatum) %>% mutate(Produktionsdatum = as.Date(Produktionsdatum))
 
-# Remove dataframes no longer needed, then garbage collect
+# Remove dataframes no longer needed
 rm(df_fahrzeug_oem_1_type_11, df_fahrzeug_oem_1_type_12, df_fahrzeug_oem_2_type_21, df_fahrzeug_oem_2_type_22)
-
 
 # Check if all ID's are unique
 if (any(duplicated(df_fahrzeug$ID_Fahrzeug ))) {
@@ -109,6 +114,7 @@ df_fahrzeug_teile <- rbind(df_fahrzeugteile_oem_1_type_11, df_fahrzeugteile_oem_
 df_fahrzeug_teile <- df_fahrzeug_teile %>%
   mutate(Motor = sapply(strsplit(as.character(ID_Motor), "-"), `[`, 1)) %>%
   filter(Motor %in% c("K1BE1", "K1BE2"))
+rm(df_fahrzeugteile_oem_1_type_11, df_fahrzeugteile_oem_1_type_12, df_fahrzeugteile_oem_2_type_21,df_fahrzeugteile_oem_2_type_22)
 
 ################################################################################
 #### LOAD COMPONENT DATAFRAMES
@@ -124,6 +130,7 @@ df_komponenten_K1BE2 <- df_komponenten_K1BE2 %>% select(ID_Motor = ID_K1BE2, ID_
 
 # Concat the component dataframes
 df_komponenten <- rbind(df_komponenten_K1BE1, df_komponenten_K1BE2)
+rm(df_komponenten_K1BE1, df_komponenten_K1BE2)
 
 ################################################################################
 #### LOAD CONTROL UNIT T02 DATAFRAMES
@@ -177,7 +184,17 @@ df_controll_unit_t02 <- df_controll_unit_t02 %>%  #rename
          Fehlerhaft_Datum = as.Date(Fehlerhaft_Datum)) %>% # filter for date 
   filter(Produktionsdatum <= as.Date("2010-12-31"),  
          Produktionsdatum >= as.Date("2008-04-01"))
-  
+
+rm(data_matrix, cleaned_string, file_str, lines, n_cols)
+
+################################################################################
+#### LOAD REGISTRATIONS
+################################################################################
+
+df_registrations <- read.csv("data/Zulassungen/Zulassungen_alle_Fahrzeuge.csv", sep=";", header = T, stringsAsFactors = F, row.names = "X") %>%
+  select(Gemeinde=Gemeinden,ID_Fahrzeug=IDNummer)
+
+
 ################################################################################
 #### COMBINE ALL THE DATAFRAMES 
 ################################################################################
@@ -185,11 +202,22 @@ df_controll_unit_t02 <- df_controll_unit_t02 %>%  #rename
 # Join the vehicles and df_fahrzeug_teile via ID_Fahrzeug to get the MotorID
 # Join the result and df_komponenten via ID_Motor to get the T2 ID
 # Join the results and df_controll_unit_t02 to only keep vehicles with affected T2 units
-df_affected_vehilces <- df_fahrzeug %>% 
+# Join the result and df_registrations to get the municipalities of affected vehicles
+df_affected_vehicles <- df_fahrzeug %>% 
   inner_join(df_fahrzeug_teile, by = "ID_Fahrzeug") %>%
   select(ID_Fahrzeug, ID_Motor) %>%
   inner_join(df_komponenten, by = "ID_Motor") %>%
   select(ID_Fahrzeug, ID_T02 = ID_T2, ID_Motor) %>%
   inner_join(df_controll_unit_t02, by = "ID_T02") %>%
-  select(ID_Fahrzeug, ID_T02, ID_Motor)
+  select(ID_Fahrzeug, ID_T02, ID_Motor) %>%
+  inner_join(df_registrations, by="ID_Fahrzeug")
 
+# Provide key numbers on registration: Overall number of municipalities with registered vehicles and number of those with affected vehicles
+muns_registered <- length(unique(df_registrations$Gemeinde))
+muns_affected <- length(unique(df_affected_vehicles$Gemeinde))
+
+print(muns_registered)
+print(muns_affected)
+
+# Remove unused dataframes
+rm(df_registrations, df_controll_unit_t02, df_fahrzeug, df_komponenten, df_fahrzeug_teile)
