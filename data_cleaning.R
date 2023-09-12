@@ -216,8 +216,5 @@ df_affected_vehicles <- df_fahrzeug %>%
 muns_registered <- length(unique(df_registrations$Gemeinde))
 muns_affected <- length(unique(df_affected_vehicles$Gemeinde))
 
-print(muns_registered)
-print(muns_affected)
-
 # Remove unused dataframes
 rm(df_registrations, df_controll_unit_t02, df_fahrzeug, df_komponenten, df_fahrzeug_teile)
