@@ -14,8 +14,8 @@ library(readr)
 ###########################
 # 
 # Column Produktionsdatum is given in unix timestamp in the col Produktionsdatum_Origin_01011970
-# data/Fahrzeug/Fahrzeuge_OEM2_Typ21.csv
-# data/Fahrzeug/Fahrzeuge_OEM2_Typ22.csv 
+# Data/Fahrzeug/Fahrzeuge_OEM2_Typ21.csv
+# Data/Fahrzeug/Fahrzeuge_OEM2_Typ22.csv 
 #
 ###########################
 #
@@ -26,12 +26,12 @@ library(readr)
 
 
 # Load the vehicles from OEM 1
-df_fahrzeug_oem_1_type_11 <- read.csv("data/Fahrzeug/Fahrzeuge_OEM1_Typ11.csv", header = T, stringsAsFactors = F, row.names = "X")
-df_fahrzeug_oem_1_type_12 <- read.csv("data/Fahrzeug/Fahrzeuge_OEM1_Typ12.csv", sep=";", header = T, stringsAsFactors = F, row.names = "X")
+df_fahrzeug_oem_1_type_11 <- read.csv("Data/Fahrzeug/Fahrzeuge_OEM1_Typ11.csv", header = T, stringsAsFactors = F, row.names = "X")
+df_fahrzeug_oem_1_type_12 <- read.csv("Data/Fahrzeug/Fahrzeuge_OEM1_Typ12.csv", sep=";", header = T, stringsAsFactors = F, row.names = "X")
 
 # Load the vehicles from OEM 2
-df_fahrzeug_oem_2_type_21 <- read.csv("data/Fahrzeug/Fahrzeuge_OEM2_Typ21.csv", header = T, stringsAsFactors = F, row.names = "X")
-df_fahrzeug_oem_2_type_22 <- read.csv("data/Fahrzeug/Fahrzeuge_OEM2_Typ22.csv", sep=";", header = T, stringsAsFactors = F, row.names = "X")
+df_fahrzeug_oem_2_type_21 <- read.csv("Data/Fahrzeug/Fahrzeuge_OEM2_Typ21.csv", header = T, stringsAsFactors = F, row.names = "X")
+df_fahrzeug_oem_2_type_22 <- read.csv("Data/Fahrzeug/Fahrzeuge_OEM2_Typ22.csv", sep=";", header = T, stringsAsFactors = F, row.names = "X")
 
 # Parse dates with Produktionsdatum_Origin_01011970 as number of days since timestamp supplied in column origin
 df_fahrzeug_oem_2_type_21 <- df_fahrzeug_oem_2_type_21 %>% mutate(Produktionsdatum = as.Date(Produktionsdatum_Origin_01011970, origin = as.Date(origin, "%d-%m-%Y")))
@@ -87,12 +87,12 @@ if(
 ################################################################################
 
 # Load the vehicleparts from OEM 1
-df_fahrzeugteile_oem_1_type_11 <- read.csv("data/Fahrzeug/Bestandteile_Fahrzeuge_OEM1_Typ11.csv", sep=";", header = T, stringsAsFactors = F, row.names = "X")
-df_fahrzeugteile_oem_1_type_12 <- read.csv("data/Fahrzeug/Bestandteile_Fahrzeuge_OEM1_Typ12.csv", sep=";", header = T, stringsAsFactors = F, row.names = "X")
+df_fahrzeugteile_oem_1_type_11 <- read.csv("Data/Fahrzeug/Bestandteile_Fahrzeuge_OEM1_Typ11.csv", sep=";", header = T, stringsAsFactors = F, row.names = "X")
+df_fahrzeugteile_oem_1_type_12 <- read.csv("Data/Fahrzeug/Bestandteile_Fahrzeuge_OEM1_Typ12.csv", sep=";", header = T, stringsAsFactors = F, row.names = "X")
 
 # Load the vehicleparts from OEM 2
-df_fahrzeugteile_oem_2_type_21 <- read.csv("data/Fahrzeug/Bestandteile_Fahrzeuge_OEM2_Typ21.csv", sep=";", header = T, stringsAsFactors = F, row.names = "X")
-df_fahrzeugteile_oem_2_type_22 <- read.csv("data/Fahrzeug/Bestandteile_Fahrzeuge_OEM2_Typ22.csv", sep=";", header = T, stringsAsFactors = F, row.names = "X1")
+df_fahrzeugteile_oem_2_type_21 <- read.csv("Data/Fahrzeug/Bestandteile_Fahrzeuge_OEM2_Typ21.csv", sep=";", header = T, stringsAsFactors = F, row.names = "X")
+df_fahrzeugteile_oem_2_type_22 <- read.csv("Data/Fahrzeug/Bestandteile_Fahrzeuge_OEM2_Typ22.csv", sep=";", header = T, stringsAsFactors = F, row.names = "X1")
 
 
 # Check if all dataframes have the same col names
@@ -121,8 +121,8 @@ rm(df_fahrzeugteile_oem_1_type_11, df_fahrzeugteile_oem_1_type_12, df_fahrzeugte
 ################################################################################
 
 # Load the component dataframes
-df_komponenten_K1BE1 <- read.csv("data/Komponente/Bestandteile_Komponente_K1BE1.csv", sep = ";", header = T, stringsAsFactors = F) 
-df_komponenten_K1BE2 <- read.csv("data/Komponente/Bestandteile_Komponente_K1BE2.csv", sep = ";", header = T, stringsAsFactors = F) 
+df_komponenten_K1BE1 <- read.csv("Data/Komponente/Bestandteile_Komponente_K1BE1.csv", sep = ";", header = T, stringsAsFactors = F) 
+df_komponenten_K1BE2 <- read.csv("Data/Komponente/Bestandteile_Komponente_K1BE2.csv", sep = ";", header = T, stringsAsFactors = F) 
 
 # Select only the relevant columns
 df_komponenten_K1BE1 <- df_komponenten_K1BE1 %>% select(ID_Motor = ID_K1BE1, ID_T2 = ID_T2)
@@ -191,7 +191,7 @@ rm(data_matrix, cleaned_string, file_str, lines, n_cols)
 #### LOAD REGISTRATIONS
 ################################################################################
 
-df_registrations <- read.csv("data/Zulassungen/Zulassungen_alle_Fahrzeuge.csv", sep=";", header = T, stringsAsFactors = F, row.names = "X") %>%
+df_registrations <- read.csv("Data/Zulassungen/Zulassungen_alle_Fahrzeuge.csv", sep=";", header = T, stringsAsFactors = F, row.names = "X") %>%
   select(Gemeinde=Gemeinden,ID_Fahrzeug=IDNummer)
 
 
@@ -211,6 +211,62 @@ df_affected_vehicles <- df_fahrzeug %>%
   inner_join(df_controll_unit_t02, by = "ID_T02") %>%
   select(ID_Fahrzeug, ID_T02, ID_Motor) %>%
   inner_join(df_registrations, by="ID_Fahrzeug")
+
+############################################################################
+#### CLEAN THE GEO DATA
+###########################################################################
+
+# Read the input CSV file
+df_geo_data <- fread("Data/Geodaten/Geodaten_Gemeinden_v1.2_2017-08-22_TrR.csv",
+              header = FALSE, sep = ";", skip = 1)
+
+# Replace commas with periods in the 5th and 6th columns
+df_geo_data[, V5 := gsub(",", ".", V5)]
+df_geo_data[, V6 := gsub(",", ".", V6)]
+
+# Convert the 5th and 6th columns to numeric
+df_geo_data[, c("V5", "V6") := lapply(.SD, as.numeric), .SDcols = c("V5", "V6")]
+
+# Function to format the 5th and 6th columns as floating-point numbers.
+# Sometimes the floatingpoint is missing, eg. 56778 instead of 56.778
+format_as_float <- function(x) {
+  if (is.numeric(x)) {
+    return(format(x, nsmall = 6))
+  } else {
+    return(x)
+  }
+}
+
+# Apply the format_as_float function to the 5th and 6th columns
+df_geo_data$V5 <- sapply(df_geo_data$V5, format_as_float)
+df_geo_data$V6 <- sapply(df_geo_data$V6, format_as_float)
+
+# Drop the first three columns from 'df_geo_data', we don't need them
+df_geo_data <- df_geo_data[, 4:6, with = FALSE]
+
+# name the columns
+colnames(df_geo_data) <- c("Gemeinde", "Longitude", "Latitude")
+
+# We found out that one Gemeinde is missing in Geo_data that is
+# needed for the damaged vehicles: Gemeinde SEEG. Add SEEG here
+new_data <- data.frame(Gemeinde = "SEEG",
+                       Longitude = 10.6085, Latitude = 47.6543)
+df_geo_data <- rbind(df_geo_data, new_data)
+
+##########################################################################
+#### MERGE VEHICLE DAMAGE DATA AND GEO DATA
+##########################################################################
+
+# Merge the datasets using the 4th column as the key
+df_merged_data <- merge(df_affected_vehicles, df_geo_data, by.x = "Gemeinde",
+                     by.y = "Gemeinde", all.x = TRUE)
+
+##########################################################################
+#### WRITE FINAL CSV FILE
+##########################################################################
+
+write.table(df_merged_data, file = "Final_dataset_group_17.csv", sep = ";", row.names = FALSE,
+             quote = FALSE)
 
 # Provide key numbers on registration: Overall number of municipalities with registered vehicles and number of those with affected vehicles
 muns_registered <- length(unique(df_registrations$Gemeinde))
