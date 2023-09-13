@@ -273,7 +273,7 @@ server <- function(input, output) {
              fill = "Vehicle Status") +
         theme_void()
       
-      # this lets the pie_chart be used uin the map
+      # this lets the pie_chart be used in the map
       popup_content <- popupGraph(pie_chart)
       
       print("Clicked Municipality:")
