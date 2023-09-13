@@ -136,7 +136,7 @@ rm(df_komponenten_K1BE1, df_komponenten_K1BE2)
 #### LOAD CONTROL UNIT T02 DATAFRAMES
 ################################################################################
 
-file_str <- read_file("data/Einzelteil/Einzelteil_T02.txt")
+file_str <- read_file("Data/Einzelteil/Einzelteil_T02.txt")
 # remove " from string
 cleaned_string <- gsub('"', '', file_str)
 # split on tabs and on spaces
@@ -241,17 +241,38 @@ format_as_float <- function(x) {
 df_geo_data$V5 <- sapply(df_geo_data$V5, format_as_float)
 df_geo_data$V6 <- sapply(df_geo_data$V6, format_as_float)
 
-# Drop the first three columns from 'df_geo_data', we don't need them
-df_geo_data <- df_geo_data[, 4:6, with = FALSE]
+# Drop the first two columns from 'df_geo_data', we don't need them
+df_geo_data <- df_geo_data[, 3:6, with = FALSE]
 
 # name the columns
-colnames(df_geo_data) <- c("Gemeinde", "Longitude", "Latitude")
+colnames(df_geo_data) <- c("PLZ", "Gemeinde", "Longitude", "Latitude")
 
 # We found out that one Gemeinde is missing in Geo_data that is
 # needed for the damaged vehicles: Gemeinde SEEG. Add SEEG here
-new_data <- data.frame(Gemeinde = "SEEG",
+new_data <- data.frame(PLZ= 87637, Gemeinde = "SEEG",
                        Longitude = 10.6085, Latitude = 47.6543)
 df_geo_data <- rbind(df_geo_data, new_data)
+
+# Read the postal code list CSV file, only keep required columns
+df_postcodes <- read.csv("georef-germany-postleitzahl.csv", sep = ";", header = T, stringsAsFactors = F) %>% select(c("Name", "Land.code"))
+
+# Create a dataframe with state capitals and their coordinates; numbering of states based on the given dataset
+df_state_capitals <- data.frame(
+  State = c(8, 9, 11, 12, 4, 2, 6, 3, 13, 5, 7, 10, 14, 15, 1, 16), 
+  StateCapital = c("Stuttgart", "Muenchen", "Berlin", "Potsdam", "Bremen", "Hamburg", "Wiesbaden", "Hannover", "Schwerin", "Düsseldorf", "Mainz", "Saarbrücken", "Dresden", "Magdeburg", "Kiel", "Erfurt"), 
+  SC_long = c(9.1829, 11.5755, 13.4050, 13.0650, 8.8017, 9.9937, 8.2430, 9.7393, 11.4018, 6.7728, 8.2473, 6.9965, 13.7384, 11.6292, 11.6276, 11.0283), 
+  SC_lat = c(48.7758, 48.1372, 52.5200, 52.3989, 53.0793, 53.5511, 50.0826, 52.3744, 53.6355, 51.2277, 49.9929, 49.2332, 51.0504, 52.1277, 52.1205, 50.9787)
+)
+
+# Assign state capitals for each postal code, assuming each code only refers to one state, which holds up for the vast majority of codes
+df_postcodes <- merge(df_postcodes, df_state_capitals, by.x="Land.code",by.y="State") %>% select(c("Name", "StateCapital", "SC_lat", "SC_long"))
+
+# Assign state capitals for each municipality
+df_geo_data <- merge(df_geo_data, df_postcodes, by.x="PLZ",by.y="Name")
+
+# Calculate distance to state capital for each municipality, required for ranking the repair services
+df_geo_data$SCdistance<- sqrt((as.numeric(df_geo_data$Longitude)-df_geo_data$SC_long)^2 + (as.numeric(df_geo_data$Latitude)-df_geo_data$SC_lat)^2)
+
 
 ##########################################################################
 #### MERGE VEHICLE DAMAGE DATA AND GEO DATA
@@ -272,8 +293,6 @@ write.table(df_merged_data, file = "Final_dataset_group_17.csv", sep = ";", row.
 muns_registered <- length(unique(df_registrations$Gemeinde))
 muns_affected <- length(unique(df_affected_vehicles$Gemeinde))
 
-print(muns_registered)
-print(muns_affected)
 
-# Remove unused dataframes
-rm(df_registrations, df_controll_unit_t02, df_fahrzeug, df_komponenten, df_fahrzeug_teile)
+# Remove unused dataframes and variables
+rm(df_registrations, df_controll_unit_t02, df_fahrzeug, df_komponenten, df_fahrzeug_teile, new_data, df_postcodes)

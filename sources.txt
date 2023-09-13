@@ -1,0 +1,5 @@
+
+
+Postcodes:
+https://public.opendatasoft.com/explore/dataset/georef-germany-postleitzahl/table
+last verified 13/09/23 01:47
