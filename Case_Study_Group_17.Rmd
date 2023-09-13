@@ -1,0 +1,98 @@
+---
+title: "Documentation Case Study, Group 17"
+output:
+  html_document:
+    toc: true
+    toc_depth: 1
+---
+
+# Importing the data
+
+In this section, we import the data for further analysis. We only imported the necessary datasets. This process involves several steps:
+
+- **Loading vehicle dataframes:**
+  - We load vehicle data from two different Original Equipment Manufacturers (OEMs) ("Fahrzeuge_OEM1_Typ11.csv", "Fahrzeuge_OEM1_Typ12.csv", "Fahrzeuge_OEM2_Typ21.csv", and "Fahrzeuge_OEM2_Typ22.csv").
+  - The most important columns are "ID_Fahrzeug" and "Produktionsdatum".
+
+
+- **Loading vehicle part dataframes:**
+  - We load vehicle part data from both OEMs ("Bestandteile_Fahrzeuge_OEM1_Typ11.csv", "Bestandteile_Fahrzeuge_OEM1_Typ12.csv", "Bestandteile_Fahrzeuge_OEM2_Typ21.csv" and "Bestandteile_Fahrzeuge_OEM2_Typ22.csv")
+  - "ID_Fahrzeug" and "ID_Motor" are the most relevant columns from those SataFrames
+   
+- **Loading the component dataframes:**
+  - We load vehicle part data from both OEMs ("Bestandteile_Komponente_K1BE1.csv" and "Bestandteile_Komponente_K1BE2.csv")
+  - we need the "ID_K1BE1" and "ID_T2" column
+   
+- **Loading control unit T02 dataframe:**
+   - We load control unit T02 data from a text file ("Einzelteil_T02.txt")
+   - "Herstellernummer", "Produktionsdatum", "Werksnummer", "Fehlerhaft_Datum", "Fehlerhaft_Fahrleistung", "Fehlerhaft_Datum" and "Fehlerhaft" columns are used
+   
+- **Loading registrations dataframe:**
+  - We load registration data for all vehicles ("Zulassungen_alle_Fahrzeuge.csv")
+  - We need the "Gemeinden" and "IDNummer" columns
+
+- **Loading geo dataframe:**
+  - We load geo location data for each municipality ("Geodaten_Gemeinden_v1.2_2017-08-22_TrR.csv")
+  - The columns that describe "Gemeinde", "PLZ", Longitude" and "Latitude" are relevant for us
+
+- **Loading data for the heatmap map:**
+  - We loaded a Shapefile (.shp) that includes all map information about the municipalities in Germany ("germany_municipalities.shp"). This dataset was downloaded from "opendata-esri-de.opendata.arcgis.com" and was created by the "Federal Agency for Cartography and Geodesy" of Germany.
+
+# Data Preparation
+
+After the loading of the Dataframes, the data needed to be prepared for further analysis. Those were the steps for the data preparation:
+
+- **Parse to the right date format**
+  - Parse the production date of datasets "Fahrzeuge_OEM2_Typ21.csv" and "Fahrzeuge_OEM2_Typ22.csv" in the form: "%d-%m-%Y"
+  - Drop the old column with the wrong production date format
+
+- **Controll the vehicle dataframes**
+  - Check if all dataframes have the same column names to prevent errors.
+  - Concatenate the dataframes
+  - Check if all vehicle ID's are unique and if all vehicles are in the time bound from the task (2016-12-31 to 2008-01-01)
+
+- **Controll and mutate the vehicle parts dataframes**
+  - Check if all dataframes have the same column names to prevent errors.
+  - Concatenate the dataframes
+  - Mutate the rows to  only get the engine Type
+    
+- **Prepare the components dataframes**
+  - Select only the relevant columns ("ID_K1BE1" and "ID_T2")
+  - Concat the component dataframes
+    
+- **Prepare the control unit T02 dataframe:**
+  - Remove " from strings
+  - Split on tabs and on spaces
+  - Create a new dataframe from the data and give it the correct column names.
+  - Keep only the part of the framework that originate from the producer 202 to get a consistend dataframe. 202 because of the task: damaged vehicles were only manufactured by this producer.
+
+- **Prepare the geo dataframe:**
+  - Change the longitude and latitude from a string to a floatingpoint number
+  - Add the folating point to numbers that have it missing, eg. 56778 instead of 56.778
+  - Only keep the needed "Gemeinde", "PLZ", Longitude" and "Latitude" column
+  - Add the municipality with the name "SEEG" because this one is missing in the geo dataset
+
+This section of the document prepares the data for subsequent analysis and ensures data consistency and quality for further investigation.
+
+
+# Creation of the final data set
+- **Filter the dataframes for task specific things**
+  - Filter the vehicle parts dataframe for the gasoline engine “K1BE1” and “K1BE2” because those are the two damaged engine types
+  - At the the control unit T02 dataframe from the pre-processing we have the parts that originate from the producer 202. Now we filter for the correct Plant Id (2022) and make sure that the dates align with our information (from 2010-12-31 to 2008-04-01).
+
+- **Join the dataframes for the result**
+  - Join the vehicles and df_fahrzeug_teile via ID_Fahrzeug to get the MotorID added to each vehicle
+  - Join the result and the components dataframe via ID_Motor to get the T2 ID
+  - Join the results and the control unit T02 dataframe to only keep vehicles with affected T2 units
+  - Join the result and the registrations dataframe to get the municipalities of affected vehicles
+  - Merge the result with the geo dataframe by the same "Gemeinde" to add the "PLZ", "Longitude" and "Latitude" to the final dataframe.
+                     
+This final dataframe was written to the CSV file named "Final_dataset_group_17.csv.". The unused dataframes were removed.
+
+# Evaluation
+
+TODO Content for Evaluation section goes here.
+
+# Result
+
+TODO Content for Result section goes here.

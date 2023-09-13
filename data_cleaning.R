@@ -254,7 +254,7 @@ new_data <- data.frame(PLZ= 87637, Gemeinde = "SEEG",
 df_geo_data <- rbind(df_geo_data, new_data)
 
 # Read the postal code list CSV file, only keep required columns
-df_postcodes <- read.csv("georef-germany-postleitzahl.csv", sep = ";", header = T, stringsAsFactors = F) %>% select(c("Name", "Land.code"))
+df_postcodes <- read.csv("www/georef-germany-postleitzahl.csv", sep = ";", header = T, stringsAsFactors = F) %>% select(c("Name", "Land.code"))
 
 # Create a dataframe with state capitals and their coordinates; numbering of states based on the given dataset
 df_state_capitals <- data.frame(
