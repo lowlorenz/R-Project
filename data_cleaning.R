@@ -199,7 +199,7 @@ df_registrations$Gemeinde <- gsub("\\d", "", df_registrations$Gemeinde)
 
 
 ################################################################################
-#### COMBINE ALL THE DATAFRAMES 
+#### COMBINE ALL THE DATAFRAMES TO GET THE DAMAGED VEHICLES
 ################################################################################
 
 # Join the vehicles and df_fahrzeug_teile via ID_Fahrzeug to get the MotorID
@@ -213,7 +213,8 @@ df_affected_vehicles <- df_fahrzeug %>%
   select(ID_Fahrzeug, ID_T02 = ID_T2, ID_Motor) %>%
   inner_join(df_controll_unit_t02, by = "ID_T02") %>%
   select(ID_Fahrzeug, ID_T02, ID_Motor) %>%
-  inner_join(df_registrations, by="ID_Fahrzeug")
+  inner_join(df_registrations, by="ID_Fahrzeug") %>%
+  mutate(Beschaedigt="ja")
 
 ############################################################################
 #### CLEAN THE GEO DATA
@@ -255,6 +256,10 @@ colnames(df_geo_data) <- c("PLZ", "Gemeinde", "Longitude", "Latitude")
 new_data <- data.frame(PLZ= 87637, Gemeinde = "SEEG",
                        Longitude = 10.6085, Latitude = 47.6543)
 df_geo_data <- rbind(df_geo_data, new_data)
+
+##########################################################################
+#### ADD DISTANCES TO GEO DATA
+##########################################################################
 
 # Read the postal code list CSV file, only keep required columns
 df_postcodes <- read.csv("www/georef-germany-postleitzahl.csv", sep = ";", header = T, stringsAsFactors = F) %>% 
@@ -314,12 +319,79 @@ waitingTimes$waitingTime <- ceiling(waitingTimes$MeanRank / 100)
 
 df_merged_data <- inner_join(df_merged_data, waitingTimes, by= "Gemeinde") %>% select(-MeanRank, -SCdistance, -SC_lat, -SC_long)
 
+##########################################################################
+#### ADD ALL FUNCTIONING VEHICLES BACK (but with less info)
+##########################################################################
+registered_vehicles <- fread("Data/Zulassungen/Zulassungen_alle_Fahrzeuge.csv", sep = ";")
+registered_vehicles <- registered_vehicles %>%
+  rename(Gemeinde = Gemeinden, ID_Fahrzeug=IDNummer)
+
+#drop unused columns
+registered_vehicles <- registered_vehicles %>%
+  select(-V1, -Zulassung)
+
+# Read the input geo CSV file
+df_geo_data <- fread("Data/Geodaten/Geodaten_Gemeinden_v1.2_2017-08-22_TrR.csv",
+                     header = FALSE, sep = ";", skip = 1)
+
+# Replace commas with periods in the 5th and 6th columns
+df_geo_data[, V5 := gsub(",", ".", V5)]
+df_geo_data[, V6 := gsub(",", ".", V6)]
+
+# Convert the 5th and 6th columns to numeric
+df_geo_data[, c("V5", "V6") := lapply(.SD, as.numeric), .SDcols = c("V5", "V6")]
+
+# Function to format the 5th and 6th columns as floating-point numbers.
+# Sometimes the floatingpoint is missing, eg. 56778 instead of 56.778
+format_as_float <- function(x) {
+  if (is.numeric(x)) {
+    return(format(x, nsmall = 6))
+  } else {
+    return(x)
+  }
+}
+
+# Apply the format_as_float function to the 5th and 6th columns
+df_geo_data$V5 <- sapply(df_geo_data$V5, format_as_float)
+df_geo_data$V6 <- sapply(df_geo_data$V6, format_as_float)
+
+# Drop the first two columns from 'df_geo_data', we don't need them
+df_geo_data <- df_geo_data[, 3:6, with = FALSE]
+
+# name the columns
+colnames(df_geo_data) <- c("PLZ", "Gemeinde", "Longitude", "Latitude")
+
+# We found out that one Gemeinden is missing in Geo_data that is
+# needed for the damaged vehicles: Gemeinden SEEG. Add SEEG here
+new_data <- data.frame(PLZ=87637, Gemeinde = "SEEG",
+                       Longitude = 10.6085, Latitude = 47.6543)
+df_geo_data <- rbind(df_geo_data, new_data)
+
+# Merge the datasets using the 4th column as the key
+registered_vehicles <- merge(registered_vehicles, df_geo_data, by.x = "Gemeinde",
+                             by.y = "Gemeinde", all.x = TRUE)
+
+# Filter out rows from additionDF where ID_Fahrzeug already exists in df_merged_data
+registered_vehicles_filtered <- registered_vehicles %>%
+  filter(!ID_Fahrzeug %in% df_merged_data$ID_Fahrzeug)
+
+# Fill all other columns with NA
+registered_vehicles_filtered$ID_T02 <- NA
+registered_vehicles_filtered$ID_Motor <- NA
+registered_vehicles_filtered$Beschaedigt <- NA
+
+# make Long and Lat nummeric
+registered_vehicles_filtered$Longitude <- as.numeric(registered_vehicles_filtered$Longitude)
+registered_vehicles_filtered$Latitude <- as.numeric(registered_vehicles_filtered$Latitude)
+
+# Step 4: Bind the rows of df_merged_data and registered_vehicles_filtered together
+combinedDF <- bind_rows(df_merged_data, registered_vehicles_filtered)
 
 ##########################################################################
 #### WRITE FINAL CSV FILE
 ##########################################################################
 
-write.table(df_merged_data, file = "Final_dataset_group_17.csv", sep = ";", row.names = FALSE,
+write.table(combinedDF, file = "Final_dataset_group_17.csv", sep = ";", row.names = FALSE,
              quote = FALSE)
 
 # Provide key numbers on registration: Overall number of municipalities with registered vehicles and number of those with affected vehicles
