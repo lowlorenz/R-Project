@@ -1,3 +1,13 @@
+# install needed packages
+install.packages("shiny")
+install.packages("leaflet")
+install.packages("leafpop")
+install.packages("sf")
+install.packages("ggplot2")
+install.packages("plotly")
+install.packages("data.table")
+install.packages("dplyr")
+
 library(shiny)
 library(leaflet)
 library(leafpop)
@@ -7,12 +17,10 @@ library(plotly)
 library(data.table)
 library(dplyr)
 
-# TODO: package install??!
 
-
-# define the Shiny-App UI
+# Define the Shiny-App UI
 ui <- fluidPage(
-  # Add custom CSS for light-blue background and font
+  # Custom CSS for light-blue background and font
   tags$style(HTML("
     body {
       background-color: lightblue;
@@ -38,23 +46,23 @@ ui <- fluidPage(
   # Sidebar layout with input and output definitions
   sidebarLayout(
     sidebarPanel(
-      # text-input for the vehicle ID
+      # Text-input for the vehicle ID
       textInput("text_input", "Enter Vehicle ID:", ""),
       
       # Action button to check the vehicle
       actionButton("check_vehicle",
                    "Check Vehicle"),
       
-      # only for visual reasons two blank lines
+      # Only for visual reasons two blank lines
       br(),
       br(),
       
-      # text-output to see if the entered vehicle is affected, also
+      # Text-output to see if the entered vehicle is affected, also
       # provide the approximate prediction for the duration of the repair
       HTML("<b>Vehicle Status:</b>"),
       textOutput("vehicle_status_output"),
       
-      # only for visual reasons two blank lines
+      # Only for visual reasons two blank lines
       br(),
       br(),
       
@@ -74,15 +82,29 @@ ui <- fluidPage(
       h4("Vehicle Damage Hotspots:"),
       
       # Display the damage heatmap of Germany
-      leafletOutput("heatmap_output")
+      leafletOutput("heatmap_output", width = "1000px"),
+      
+      # Display the final dataset
+      fluidRow(
+        column(12,
+               dataTableOutput('table')
+        )
+      )
     )
   )
 )
 
-# define the Shiny-App logic
+# Define the Shiny-App logic
 server <- function(input, output) {
   # Load your damaged vehicles dataset
   final_dataset <- fread("Final_dataset_group_17.csv", sep = ";")
+  
+  # Render the CSV file as a DataTable
+  output$table <- renderDataTable(final_dataset,
+                                  options = list(
+                                    pageLength = 5
+                                  )
+  )
   
   ########################################################################
   ##################### Check vehicle logic ##############################
@@ -97,18 +119,23 @@ server <- function(input, output) {
   checkVehicle <- function() {
     vehicle_id <- input$text_input
     
-    # check if entry is null
+    # Check if entry is null
     if (is.null(vehicle_id) || vehicle_id == "") {
       return("no vehicle ID entered")
     } else {
-      # check if the format is correct
+      # Check if the format is correct
       if (!grepl("^\\d+-\\d+-\\d+-\\d+$", vehicle_id)) {
         return("format wrong")
       } else {
         # Check if the entered vehicle ID exists in the final dataset and is marked as damaged
         if (vehicle_id %in% final_dataset$ID_Fahrzeug) {
-          # TODO: NAME NEAREST REPAIR SERVICE AND WAITING TIME
-          return("Vehicle is damaged")
+          # Check if the vehicle is damaged at all
+          if (final_dataset$Beschaedigt[final_dataset$ID_Fahrzeug == vehicle_id] == "ja") {
+            # Find the waitingTime value for the specified vehicle_id
+            waiting_time <- final_dataset$waitingTime[final_dataset$ID_Fahrzeug == vehicle_id]
+            return(paste("Vehicle is damaged. Waiting Time in days:", waiting_time))
+          }
+          return("Vehicle is NOT damaged")
         } else {
           return("Vehicle is NOT damaged")
         }
@@ -133,13 +160,18 @@ server <- function(input, output) {
       paste("update_action_", input$vehicle_type, ".csv", sep = "")
     },
     content = function(file) {
-      # TODO: logic
-      # Generate and write your dataset to the file in CSV format
-      # Replace the following example code with your dataset generation logic
-      dataset <- data.frame(
-        ID = 1:10,
-        Value = rnorm(10)
-      )
+      vehicle_type <- input$vehicle_type
+      
+      # Get the last two characters of the string
+      vehicleType <- substr(vehicle_type, nchar(vehicle_type) - 1, nchar(vehicle_type))
+      # Filter rows where ID_Fahrzeug starts with the right type
+      dataset <- final_dataset[grepl(paste0("^", vehicleType), final_dataset$ID_Fahrzeug), ]
+      
+      # Only keep the relevant information regarding the vehicle_ID and the update time
+      dataset <- dataset %>%
+        filter(Beschaedigt == "ja") %>%
+        select(ID_Fahrzeug, waitingTime)
+      
       write.csv(dataset, file, row.names = FALSE)
     }
   )
@@ -148,19 +180,21 @@ server <- function(input, output) {
   ###################### heatmap map logic ###############################
   ########################################################################
   
+  print("Start generating Map")
   # Load the shapefile for German municipalities
   germany_shapefile <- st_read("www/germany_municipalities.shp")
   
-  # add an unique Id to each entry
+  # Add an unique Id to each entry
   germany_shapefile$layerId <- paste0(germany_shapefile$GEN, "_",
                                       1:nrow(germany_shapefile))
   
-  # Reproject shapeile to WGS84 format
+  # Reproject shapefile to WGS84 format
   germany_shapefile <- st_transform(germany_shapefile,
                                     crs = st_crs("+proj=longlat +datum=WGS84"))
   
   # Create a new dataset with unique "Gemeinde" values and their counts
   damaged_vehicles <- final_dataset %>%
+    filter(Beschaedigt == "ja") %>%
     group_by(Gemeinde, Longitude, Latitude) %>%
     summarize(Anzahl_beschaedigt = n()) %>%
     ungroup()
@@ -178,53 +212,12 @@ server <- function(input, output) {
                                                  0, 
                                                  germany_shapefile$Anzahl_beschaedigt)
   
-  # repeat process for all registered vehicles
-  registered_vehicles <- fread("Data/Zulassungen/Zulassungen_alle_Fahrzeuge.csv", sep = ";")
   
-  # Read the input geo CSV file
-  df_geo_data <- fread("Data/Geodaten/Geodaten_Gemeinden_v1.2_2017-08-22_TrR.csv",
-                       header = FALSE, sep = ";", skip = 1)
-  
-  # Replace commas with periods in the 5th and 6th columns
-  df_geo_data[, V5 := gsub(",", ".", V5)]
-  df_geo_data[, V6 := gsub(",", ".", V6)]
-  
-  # Convert the 5th and 6th columns to numeric
-  df_geo_data[, c("V5", "V6") := lapply(.SD, as.numeric), .SDcols = c("V5", "V6")]
-  
-  # Function to format the 5th and 6th columns as floating-point numbers.
-  # Sometimes the floatingpoint is missing, eg. 56778 instead of 56.778
-  format_as_float <- function(x) {
-    if (is.numeric(x)) {
-      return(format(x, nsmall = 6))
-    } else {
-      return(x)
-    }
-  }
-  
-  # Apply the format_as_float function to the 5th and 6th columns
-  df_geo_data$V5 <- sapply(df_geo_data$V5, format_as_float)
-  df_geo_data$V6 <- sapply(df_geo_data$V6, format_as_float)
-  
-  # Drop the first three columns from 'df_geo_data', we don't need them
-  df_geo_data <- df_geo_data[, 4:6, with = FALSE]
-  
-  # name the columns
-  colnames(df_geo_data) <- c("Gemeinden", "Longitude", "Latitude")
-  
-  # We found out that one Gemeinden is missing in Geo_data that is
-  # needed for the damaged vehicles: Gemeinden SEEG. Add SEEG here
-  new_data <- data.frame(Gemeinden = "SEEG",
-                         Longitude = 10.6085, Latitude = 47.6543)
-  df_geo_data <- rbind(df_geo_data, new_data)
-  
-  # Merge the datasets using the 4th column as the key
-  registered_vehicles <- merge(registered_vehicles, df_geo_data, by.x = "Gemeinden",
-                          by.y = "Gemeinden", all.x = TRUE)
-  
-  # Create a new dataset with unique "Gemeinden" values and their counts
-  registered_vehicles <- registered_vehicles %>%
-    group_by(Gemeinden, Longitude, Latitude) %>%
+  # Repeat process for functioning vehicles
+  # Create a new dataset with unique "Gemeinde" values and their counts
+  registered_vehicles <- final_dataset %>%
+    filter(Beschaedigt == "nein") %>%
+    group_by(Gemeinde, Longitude, Latitude) %>%
     summarize(Anzahl_registriert = n()) %>%
     ungroup()
   
@@ -273,7 +266,7 @@ server <- function(input, output) {
              fill = "Vehicle Status") +
         theme_void()
       
-      # this lets the pie_chart be used in the map
+      # This lets the pie_chart be used in the map
       popup_content <- popupGraph(pie_chart)
       
       print("Clicked Municipality:")
@@ -288,7 +281,7 @@ server <- function(input, output) {
     }
   }
   
-  # render the output heatmap
+  # Render the output heatmap
   output$heatmap_output <- renderLeaflet({ leaflet() %>%
     addTiles() %>%
     addPolygons(
@@ -300,7 +293,7 @@ server <- function(input, output) {
       label = ~GEN,
       layerId = ~layerId
     ) %>%
-      # add a legend for the heatmap in the bottom corner
+      # Add a legend for the heatmap in the bottom corner
     addLegend(
       "bottomright",
       pal = color_palette,
@@ -331,5 +324,5 @@ server <- function(input, output) {
   })
 }
 
-# run the Shiny-App
+# Run the Shiny-App
 shinyApp(ui = ui, server = server)

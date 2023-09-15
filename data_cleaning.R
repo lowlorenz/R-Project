@@ -1,6 +1,8 @@
-#setwd("C:/Users/Lorenz/Documents/R-Project")
-#install.packages("tidyverse")
-#install.packages("data.table")
+install.packages("tidyverse")
+install.packages("data.table")
+install.packages("dplyr")
+install.packages("readr")
+
 library(data.table)
 library(tidyverse)
 library(dplyr)
@@ -41,7 +43,6 @@ df_fahrzeug_oem_2_type_22 <- df_fahrzeug_oem_2_type_22 %>% mutate(Produktionsdat
 # Drop old Produktionsdatum_Origin_01011970 and origin columns since they are no longer required
 df_fahrzeug_oem_2_type_21 <- df_fahrzeug_oem_2_type_21 %>% select(-Produktionsdatum_Origin_01011970, -origin)
 df_fahrzeug_oem_2_type_22 <- df_fahrzeug_oem_2_type_22 %>% select(-Produktionsdatum_Origin_01011970, -origin)
-
 
 # Check if all dataframes have the same col names
 if(!setequal(colnames(df_fahrzeug_oem_1_type_11), colnames(df_fahrzeug_oem_1_type_12)) ||
@@ -257,6 +258,7 @@ new_data <- data.frame(PLZ= 87637, Gemeinde = "SEEG",
                        Longitude = 10.6085, Latitude = 47.6543)
 df_geo_data <- rbind(df_geo_data, new_data)
 
+
 ##########################################################################
 #### ADD DISTANCES TO GEO DATA
 ##########################################################################
@@ -281,6 +283,7 @@ df_geo_data <- inner_join(df_geo_data, df_postcodes, by=c("PLZ"="Name"))
 
 # Calculate distance to state capital for each municipality, required for ranking the repair services
 df_geo_data$SCdistance<- sqrt((as.numeric(df_geo_data$Longitude)-df_geo_data$SC_long)^2 + (as.numeric(df_geo_data$Latitude)-df_geo_data$SC_lat)^2)
+
 
 ##########################################################################
 #### MERGE VEHICLE DAMAGE DATA AND GEO DATA
@@ -309,6 +312,10 @@ rm(capital)
 
 # Bind list of lists to a dataset
 df_waiting_lists <- bind_rows(waiting_lists)
+
+a <- nrow(df_waiting_lists)
+print("CCCCCCCC")
+print(a)
 
 # Calculate mean waiting time for each municipality based on mean rank position and repair rate of 100/day, rounding conservatively
 waitingTimes <- df_waiting_lists %>%
@@ -375,16 +382,20 @@ registered_vehicles <- merge(registered_vehicles, df_geo_data, by.x = "Gemeinde"
 registered_vehicles_filtered <- registered_vehicles %>%
   filter(!ID_Fahrzeug %in% df_merged_data$ID_Fahrzeug)
 
-# Fill all other columns with NA
-registered_vehicles_filtered$ID_T02 <- NA
-registered_vehicles_filtered$ID_Motor <- NA
-registered_vehicles_filtered$Beschaedigt <- NA
+# Fill all other columns with "-"
+registered_vehicles_filtered$ID_T02 <- "-"
+registered_vehicles_filtered$ID_Motor <- "-"
+registered_vehicles_filtered$Beschaedigt <- "nein"
+registered_vehicles_filtered$StateCapital <- "-"
+registered_vehicles_filtered$waitingTime <- -1
 
 # make Long and Lat nummeric
 registered_vehicles_filtered$Longitude <- as.numeric(registered_vehicles_filtered$Longitude)
 registered_vehicles_filtered$Latitude <- as.numeric(registered_vehicles_filtered$Latitude)
+df_merged_data$Longitude <- as.numeric(df_merged_data$Longitude)
+df_merged_data$Latitude <- as.numeric(df_merged_data$Latitude)
 
-# Step 4: Bind the rows of df_merged_data and registered_vehicles_filtered together
+# Bind the rows of df_merged_data and registered_vehicles_filtered together
 combinedDF <- bind_rows(df_merged_data, registered_vehicles_filtered)
 
 ##########################################################################
