@@ -170,7 +170,7 @@ server <- function(input, output) {
       # Only keep the relevant information regarding the vehicle_ID and the update time
       dataset <- dataset %>%
         filter(Beschaedigt == "ja") %>%
-        select(ID_Fahrzeug, waitingTime)
+        select(ID_Fahrzeug, waitingTime, StateCapital)
       
       write.csv(dataset, file, row.names = FALSE)
     }
