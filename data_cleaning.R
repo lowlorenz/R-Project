@@ -2,12 +2,13 @@ install.packages("tidyverse")
 install.packages("data.table")
 install.packages("dplyr")
 install.packages("readr")
+install.packages("readxl")
 
 library(data.table)
 library(tidyverse)
 library(dplyr)
 library(readr)
-
+library(readxl)
 
 ################################################################################
 #### LOAD VEHICLE DATAFRAMES
@@ -198,6 +199,51 @@ df_registrations <- read.csv("Data/Zulassungen/Zulassungen_alle_Fahrzeuge.csv", 
 # Clean municipality names of numbers
 df_registrations$Gemeinde <- gsub("\\d", "", df_registrations$Gemeinde)
 
+# Some municipalities no longer exist since they were integrated into others, 
+# accounting for those is possible with the destatis lists since the first registration
+# 2009...2023
+# However this does not work because unlike real data from KBA 
+# the registrations do not contain addresses 
+# which would be the basis to determine which municipality they belong to after a change
+
+#Example implementation if that data was available:
+#Procedure: Clean lists, read them, Capitalise names, match old names with muns from df_registrations, changes muns from df_regs to new ones
+#umgemeindung <- read_xlsx("www/umgemeindungen/2010.xlsx", sheet = 2) %>%  #read list and clean
+#  select(5, 11,12) %>% 
+#  rename_at(1, ~"Alt") %>% 
+#  rename_at(2, ~"Neu") %>%
+#  rename_at(3, ~"Datum") %>%
+#  mutate(Alt = sub(",.*", "", Alt)) %>% #only keep names, remove suffixes like "Stadt" or "Kreisstadt" since they are not included in the KBA-registrations
+#  mutate(Neu = sub(",.*", "", Neu)) %>%
+#  filter(Alt != Neu) # ignore operations without name changes (eg municipality key or are change)
+
+#df_registrations <- df_registrations %>% #change municipality names
+#  left_join(umgemeindung, by = c("Gemeinde" = "Alt")) %>%
+#  mutate(city = ifelse(is.na(Neu), Gemeinde, Neu)) %>%
+#  select(-Alt, -Neu)
+
+# Instead of an automatic approach, the affected municipalitys were manually detected 
+# and are updated below with destatis information:
+
+# Define the replacements as a named vector
+replacements <- c(
+  "LICHTE" = "NEUHAUS AM RENNWEG",
+  "GEHREN" = "ILMENAU",
+  "HERRMANSACKER" = "HARZTOR",
+  "REICHMANSDORF" = "SAALFELD",
+  "SACHSENBRUNN" = "EISFELD",
+  "LANGEWIESEN" = "ILMENAU",
+  "NARSDORF" = "GEITHAIN",
+  "KOHREN SALIS" = "FROHBURG",
+  "SENSBACHTAL" = "OBERZENT",
+  "SCHMIEDEFELD" = "SAALFELD",
+  "KAMSDORF" = "UNTERWELLENBORN"
+)
+
+# Replace rows in the "Gemeinde" column based on the named vector
+df_registrations <- df_registrations %>% 
+  mutate(Gemeinde = ifelse(Gemeinde %in% names(replacements), replacements[Gemeinde], Gemeinde))
+
 
 ################################################################################
 #### COMBINE ALL THE DATAFRAMES TO GET THE DAMAGED VEHICLES
@@ -264,7 +310,7 @@ df_geo_data <- rbind(df_geo_data, new_data)
 ##########################################################################
 
 # Read the postal code list CSV file, only keep required columns
-df_postcodes <- read.csv("www/georef-germany-postleitzahl.csv", sep = ";", header = T, stringsAsFactors = F) %>% 
+df_postcodes <- read.csv("www/georef-germany-postleitzahl_data.csv", sep = ";", header = T, stringsAsFactors = F) %>% 
   select(c("Name", "Land.code"))%>% 
   distinct(Name, .keep_all = TRUE)
 
